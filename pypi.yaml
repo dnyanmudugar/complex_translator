@@ -1,53 +1,37 @@
-name: Publish to PyPI
+name: Publish Python Package
 
 on:
   release:
-    types: [published] # Triggers when you create a GitHub Release
+    types: [published] # Triggers when you create a new GitHub Release
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    name: Build distribution
+  deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org # Replace with your package name
+    permissions:
+      id-token: write # Required for PyPI Trusted Publishing OIDC authentication
 
     steps:
-    - name: Checkout source
+    - name: Checkout Source Code
       uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.x"
+        python-version: '3.11'
 
-    - name: Install build tools
-      run: python3 -m pip install build --user
+    - name: Install Build Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install build
 
-    - name: Build a binary wheel and a source tarball
-      run: python3 -m build
+    - name: Build Package Artifacts
+      run: python -m build
 
-    - name: Store the distribution packages
-      uses: actions/upload-artifact@v4
-      with:
-        name: python-package-distributions
-        path: dist/
-
-  publish:
-    name: Publish to PyPI
-    needs: build
-    runs-on: ubuntu-latest
-    
-    environment:
-      name: pypi
-      url: https://pypi.org{{ github.event.repository.name }}
-      
-    permissions:
-      id-token: write  # MANDATORY: Required for trusted publishing OIDC authentication
-
-    steps:
-    - name: Download all the dists
-      uses: actions/download-artifact@v4
-      with:
-        name: python-package-distributions
-        path: dist/
-
-    - name: Publish package distributions to PyPI
+    - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
