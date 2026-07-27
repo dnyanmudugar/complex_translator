@@ -2,19 +2,19 @@ name: Publish Python Package
 
 on:
   release:
-    types: [published] # Triggers when you create a new GitHub Release
+    types: [published] # Triggers automatically when you hit 'Publish' on a GitHub Release
 
 permissions:
   contents: read
 
 jobs:
-  deploy:
+  test_and_deploy:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org # Replace with your package name
+      url: https://pypi.org # Replace with your package URL if named differently
     permissions:
-      id-token: write # Required for PyPI Trusted Publishing OIDC authentication
+      id-token: write # CRITICAL: Gives GitHub permission to securely trade OIDC tokens with PyPI [1]
 
     steps:
     - name: Checkout Source Code
@@ -25,13 +25,18 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Install Build Dependencies
+    - name: Install Testing & Build Tools
       run: |
         python -m pip install --upgrade pip
-        python -m pip install build
+        python -m pip install build pytest
+        python -m pip install -e .
 
-    - name: Build Package Artifacts
+    # The pipeline halts automatically if your test suite reports an issue
+    - name: Run Pytest Suite
+      run: python -m pytest
+
+    - name: Build Package Distribution Archives
       run: python -m build
 
-    - name: Publish to PyPI
+    - name: Securely Deploy to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
